@@ -3,8 +3,9 @@
 App = {
   web3: null,
   contracts: {},
-  address: "0xf1BB23f233aBFb851299A3FD26722cac27742d01",
+  address: "0x82bbEA2EB72DE243B7866Adf8DeDbd720B10A160",
   handler: null,
+  insuranceAmount:0,
 
   init: function () {
     App.populateAddress().then((r) => (App.handler = r[0]));
@@ -61,6 +62,27 @@ App = {
       App.getPatientInsurance(jQuery("#patientIdInsurance").val());
     
     });
+    $(document).on("click", "#add_agent_details", function () {
+    
+      App.createAgent(jQuery("#agentName").val(), jQuery("#agentID").val(),jQuery("#agentCompany").val());
+    
+    });
+    $(document).on("click", "#getInsurancePrice", function () {
+       App.getInsurance();
+      //App.createAgent(jQuery("#agentName").val(), jQuery("#agentID").val(),jQuery("#agentCompany").val());
+    
+    });
+    $(document).on("click", "#buy_gvt", function () {
+      console.log("hhhhh");
+      App.getTokens(jQuery("#amount").val());
+     //App.createAgent(jQuery("#agentName").val(), jQuery("#agentID").val(),jQuery("#agentCompany").val());
+   
+   });
+   $(document).on("click", "#get_gvt", function () {
+    App.getGVT();
+   //App.createAgent(jQuery("#agentName").val(), jQuery("#agentID").val(),jQuery("#agentCompany").val());
+ 
+ });
   },
 
   populateAddress: async function () {
@@ -202,7 +224,7 @@ App = {
       alert("Please enter the correct ID");
     }
   },
-  // This is the ABI of HealthCareium
+  
 
   getPatientInsurance: async function (patientId) {
    
@@ -222,15 +244,20 @@ App = {
        if(r.category == "2")
        {
         jQuery("<h4> The Insurance Premium for patient is $1500</h4>").appendTo("#getInsurance");
+        App.insuranceAmount = 1500;
        }
        else if( r.category == "1")
        {
         jQuery("<h4> The Insurance Premium for patient is $1200</h4>").appendTo("#getInsurance");
+        App.insuranceAmount = 1200;
        }
        else
        {
         jQuery("<h4> The Insurance Premium for patient is $900</h4>").appendTo("#getInsurance");
+        App.insuranceAmount = 900;
        }
+
+    
 
  
 
@@ -244,7 +271,114 @@ App = {
   }
 },
 
+getInsurance: async function (){
+  var option = { from: App.handler };
+  
+  try
+  {  
+    await App.contracts.Counter.methods
+      .getInsurance(App.insuranceAmount)
+      .send(option)
+      .on("receipt", (receipt) => {
+        if (receipt.status) {
+          alert("You are insured ");
+        }
+  
+      });
+    }
+    catch
+    {
+      alert("Not enough GVT. Buy GVT");
+    } 
+
+
+},
+
+createAgent: async function (agentName, agentId,agentCompany) {
+  var option = { from: App.handler };
+  console.log(option);
+try
+{  
+  await App.contracts.Counter.methods
+    .createInsuranceAgent(agentId, agentName,agentCompany)
+    .send(option)
+    .on("receipt", (receipt) => {
+      if (receipt.status) {
+        alert("Agent has been created  \n Name "+agentName+
+              "\n Id "+agentId);
+      }
+
+    });
+  }
+  catch
+  {
+    alert("Incorrect Id or not permitted to create Agent");
+  }
+},
+
+getTokens: async function (amount){
+  var option = { from: App.handler };
+  numberTokens = parseInt(amount)
+
+  try
+  {  
+    await App.contracts.Counter.methods
+      .buyTokens(numberTokens)
+      .send(option)
+      .on("receipt", (receipt) => {
+        if (receipt.status) {
+          alert("Tokens Purchased");
+        }
+  
+      });
+    }
+    catch
+    {
+      alert("There was some error. Please enter a whole");
+    }
+  }, 
+
+
+  getGVT: async function () {
+   
+    
+    var option = { from: App.handler}; 
+    console.log(option);
+  try{
+   await  App.contracts.Counter.methods
+    .getBalance(App.handler)
+    .call(option).then((r)=>{
+      console.log(r)
+    
+      
+
+     jQuery("<h2> Your Balance is  "+parseInt(r/10**18)+"</h2>").appendTo("#getBalance");
+
+
+
+      
+    })
+  }
+  catch(err)
+  {
+   alert("OOPS! There was an error");
+  }
+},
+
   abi:[
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "buyTokens",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
     {
       "inputs": [
         {
@@ -264,6 +398,29 @@ App = {
         }
       ],
       "name": "createDoctor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_id",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "_name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_company",
+          "type": "string"
+        }
+      ],
+      "name": "createInsuranceAgent",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -310,9 +467,54 @@ App = {
       "type": "function"
     },
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "getInsurance",
+      "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "stateMutability": "payable",
       "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "getAgentDetails",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "adAgent",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_id",
+          "type": "address"
+        }
+      ],
+      "name": "getBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "balance",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
     },
     {
       "inputs": [
@@ -389,9 +591,23 @@ App = {
       ],
       "stateMutability": "view",
       "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "token",
+      "outputs": [
+        {
+          "internalType": "contract MyContract",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
     }
   ]
 
+  
   // This is the end of HealthCareium ABI
 };
 

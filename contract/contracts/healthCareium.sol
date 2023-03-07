@@ -1,15 +1,71 @@
 //SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+
+contract MyContract is ERC20{
+    uint public number;
+    address owner;
+
+    modifier onlyOwner() 
+            { 
+                require(msg.sender == owner);
+            _   ;
+            }
+
+    constructor() public ERC20("Governmenterium", "GVT") {        
+        _mint(msg.sender,10000000*10**18);
+        owner = msg.sender;
+    }    
+   
+     // ERC20 Methods
+            
+          
+
+        
+           function rewardDoctor(address receiver,uint amount) public onlyOwner
+           {
+                
+                 _mint(receiver,amount);    
+           }
+
+            function rewardPatient(address receiver,uint amount) public onlyOwner 
+           {
+                
+                 _mint(receiver,amount);
+                 
+           }
+
+           function getInsurance(address sender,address agent,uint256 amount) public onlyOwner
+           { 
+              _transfer(sender,agent,amount);
+           }
+
+           function sellTokens(address receiver,uint256 amount) public onlyOwner 
+           {
+                
+                 _mint(receiver,amount);
+                 
+           }
+
+
+}
 
 
 contract HealthCareium{
+
+        
+        MyContract public token;
+
          string public name ;
          address owner;
          mapping(address=>doctor) doctorData;
          mapping(address=>patient) patientData;
+         mapping(address=>insuranceAgent) agentData;
          mapping(address=>info) person;
          mapping (address => mapping (address => bool))  canSeePatient;
+         mapping(uint256 => address ) insurance;
 
         enum patientCondition{ EXCELLENT, GOOD, BAD }
 
@@ -35,9 +91,11 @@ contract HealthCareium{
 
 
           
-           constructor() {
+           constructor() payable {
                 owner = msg.sender;
                 name = "HealthCareium";
+                token = new MyContract();
+                
             }
 
 // All the Information regarding the person
@@ -54,6 +112,11 @@ contract HealthCareium{
                     uint256[] healthScore;
                    }
 
+        struct insuranceAgent{
+                    bool isInsuranceAgent;
+                    string company;
+                   }           
+
         struct info{
                     address id;
                     string  name;
@@ -64,26 +127,49 @@ contract HealthCareium{
 
           function createDoctor(address _id,string memory _name,string memory _specialty)  public onlyOwner
            {
+               if(doctorData[_id].isDoctor == false)
+                    {
+                            token.rewardDoctor(_id,5000*10**18);
+                    }
               person[_id] = info(_id,_name);
               doctorData[_id] = doctor(true,_specialty);
+           }
+
+            function createInsuranceAgent(address _id,string memory _name,string memory _company)  public onlyOwner
+           {
+               
+              person[_id] = info(_id,_name);
+              agentData[_id] = insuranceAgent(true,_company);
+              insurance[0] = _id;
            }
 
 
            function getDoctorDetails(address _id)  public onlyOwner view returns(bool _isDoctor,string memory _name, string memory _specialty)
            {
+               
               _isDoctor = doctorData[_id].isDoctor;
               _name = person[_id].name;
               _specialty = doctorData[_id].specialty;
 
            }
+           
+            function getAgentDetails()  public onlyOwner view returns(address adAgent)
+           {
+              adAgent = insurance[0];
+           }
 
 
            function enterPatientPrescription(address _id,string memory _name,string memory _prescription,uint256 _healthScore)  public onlyDoctors
            {
+
+               if(patientData[_id].isPatient == false)
+                    {
+                            token.rewardPatient(_id,5000*10**18);
+                    }  
                person[_id] = info(_id,_name);
                patientData[_id].isPatient = true;
                patientData[_id].healthRecords.push(_prescription);
-                patientData[_id].healthScore.push(_healthScore);
+               patientData[_id].healthScore.push(_healthScore);
            }
 
 
@@ -124,17 +210,27 @@ contract HealthCareium{
                 }
 
            }
- 
+           // ERC20 Token Methods
+
+           
+            function getBalance(address _id) public view  returns(uint256 balance)
+           {
+               balance = token.balanceOf(_id);
+           }
+
+            function getInsurance(uint256 amount) public onlyPatients
+           { 
+              token.getInsurance(msg.sender,insurance[0], amount*10**18);
+           }
+
+            function buyTokens(uint256 amount) public
+           { 
+              token.sellTokens(msg.sender, amount*10**18);
+           }
+           
 
 
-
-
-
-
-
-
-
-
+           
 
 
 }
